@@ -1,0 +1,42 @@
+# Antigravity & AI Agent directories
+.agents/
+agents/
+.gemini/
+.claude/
+
+# Web Admin dependencies and build
+node_modules/
+admin_web/node_modules/
+admin_web/dist/
+admin_web/.env
+admin_web/.env.local
+admin_web/scratch_*.js
+admin_web/scratch_*.cjs
+
+# Flutter & Dart dependencies and build
+.dart_tool/
+.pub/
+.pub-cache/
+cr404_expense_manager/.dart_tool/
+cr404_expense_manager/.pub-cache/
+cr404_expense_manager/.pub/
+cr404_expense_manager/build/
+build/
+
+# Android build outputs & local properties
+android/.gradle
+cr404_expense_manager/android/.gradle
+cr404_expense_manager/android/local.properties
+*.apk
+*.aab
+
+# Database backups & local dumps
+*.sql.gz
+my_backup.sql
+
+# IDE & OS files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

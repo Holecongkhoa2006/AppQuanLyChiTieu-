@@ -1,0 +1,10 @@
+CompileFlags:
+  Add:
+    - "-Id:/Users/Admin/AppQuanLyChiTieu/cr404_expense_manager/windows/flutter/ephemeral"
+    - "-Id:/Users/Admin/AppQuanLyChiTieu/cr404_expense_manager/windows/flutter/ephemeral/cpp_client_wrapper/include"
+Diagnostics:
+  Suppress:
+    - "pp_file_not_found"
+    - "undeclared_var_use"
+    - "unused-includes"
+
