@@ -451,9 +451,6 @@ class MySqlService {
   Future<List<AccountModel>> getAccounts(int userId) async {
     final conn = await getConnection();
     try {
-      // Đồng bộ số dư thực tế vào DB
-      await syncAndRecalculateAccountBalances(userId, activeConn: conn);
-
       final res = await conn.execute(
         '''SELECT a.*,
              (a.initial_balance + 
@@ -473,16 +470,7 @@ class MySqlService {
            ORDER BY a.id ASC''',
         {'uid': userId},
       );
-      final list = res.rows.map((r) => AccountModel.fromMap(r.assoc())).toList();
-      for (final acc in list) {
-        try {
-          await conn.execute(
-            'UPDATE accounts SET current_balance = :bal WHERE id = :aid',
-            {'bal': acc.balance, 'aid': acc.id},
-          );
-        } catch (_) {}
-      }
-      return list;
+      return res.rows.map((r) => AccountModel.fromMap(r.assoc())).toList();
     } finally {
       await conn.close();
     }
@@ -728,7 +716,6 @@ class MySqlService {
            FROM categories
            WHERE type = :typ 
              AND (user_id = :uid OR user_id IS NULL)
-           GROUP BY name, type
            ORDER BY name ASC''',
         {'typ': type, 'uid': userId ?? 0},
       );

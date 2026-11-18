@@ -320,13 +320,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
 
     if (_selectedAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng chọn tài khoản!'),
-          backgroundColor: AppColors.expense,
-        ),
-      );
-      return;
+      if (_accountList.isNotEmpty) {
+        _selectedAccount = _accountList.first;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chưa có tài khoản nào được tạo hoặc đang tải. Vui lòng thử lại!'),
+            backgroundColor: AppColors.expense,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _loading = true);
@@ -645,7 +649,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
               // Chọn Tài khoản nguồn
               DropdownButtonFormField<AccountModel>(
-                value: _selectedAccount,
+                value: _accountList.contains(_selectedAccount)
+                    ? _selectedAccount
+                    : (_accountList.isNotEmpty ? _accountList.first : null),
                 decoration: InputDecoration(
                   labelText: _txTypeIndex == 2 ? 'Từ tài khoản' : 'Tài khoản thanh toán',
                   prefixIcon: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
@@ -663,7 +669,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               // Nếu là chuyển khoản: Chọn tài khoản đích
               if (_txTypeIndex == 2) ...[
                 DropdownButtonFormField<AccountModel>(
-                  value: _toAccount,
+                  value: _accountList.contains(_toAccount)
+                      ? _toAccount
+                      : (_accountList.length > 1 ? _accountList[1] : null),
                   decoration: const InputDecoration(
                     labelText: 'Đến tài khoản',
                     prefixIcon: Icon(Icons.swap_horiz_rounded, color: AppColors.primary),
