@@ -14,12 +14,9 @@ class MySqlService {
   static const String dbHost = 'khoasever-009-kirigaya43206-94c9.k.aivencloud.com';
   static const int    dbPort = 10407;
   static const String dbUser = 'avnadmin';
-  static final String dbPass = const String.fromEnvironment(
-    'DB_PASS',
-    defaultValue: String.fromCharCodes([
-      65, 86, 78, 83, 95, 120, 79, 56, 102, 119, 48, 50, 74, 69, 109, 98, 122, 115, 57, 55, 48, 72, 103, 79
-    ]),
-  );
+  static final String dbPass = String.fromCharCodes([
+    65, 86, 78, 83, 95, 120, 79, 56, 102, 119, 48, 50, 74, 69, 109, 98, 122, 115, 57, 55, 48, 72, 103, 79
+  ]);
   static const String dbName = 'defaultdb';
 
   bool _initialized = false;
