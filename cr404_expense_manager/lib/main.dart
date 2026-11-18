@@ -159,6 +159,7 @@ class MainHomeScreen extends StatefulWidget {
 
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _tabIndex = 0;
+  final Set<int> _loadedTabs = {0};
   int? _userId;
   String _userName  = 'Người dùng';
   String _userEmail = '';
@@ -253,8 +254,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             });
           }
         }
-        // Đồng bộ số dư tài khoản ngay khi người dùng vào ứng dụng
-        await MySqlService.instance.syncAndRecalculateAccountBalances(uid, activeConn: conn);
       } finally {
         await conn.close();
       }
@@ -264,6 +263,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   void _onTabSelected(int index) {
     setState(() {
       _tabIndex = index;
+      _loadedTabs.add(index);
       _refreshKey = UniqueKey(); // Tự động tải lại dữ liệu mới nhất khi ấn vào mục!
     });
   }
@@ -320,10 +320,18 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                 _onTabSelected(1);
               },
             ),
-            CalendarScreen(userId: activeUserId),
-            ChartScreen(userId: activeUserId),
-            AccountsScreen(userId: activeUserId),
-            BudgetScreen(userId: activeUserId),
+            _loadedTabs.contains(1)
+                ? CalendarScreen(userId: activeUserId)
+                : const SizedBox.shrink(),
+            _loadedTabs.contains(2)
+                ? ChartScreen(userId: activeUserId)
+                : const SizedBox.shrink(),
+            _loadedTabs.contains(3)
+                ? AccountsScreen(userId: activeUserId)
+                : const SizedBox.shrink(),
+            _loadedTabs.contains(4)
+                ? BudgetScreen(userId: activeUserId)
+                : const SizedBox.shrink(),
           ],
         ),
       ),

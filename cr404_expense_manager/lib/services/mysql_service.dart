@@ -34,7 +34,7 @@ class MySqlService {
       databaseName: dbName,
       secure: true,
     );
-    await conn.connect();
+    await conn.connect(timeoutMs: 25000);
     try {
       await conn.execute('SET NAMES utf8mb4;');
       await conn.execute("SET time_zone = '+07:00';");
@@ -276,9 +276,6 @@ class MySqlService {
       final prevYear = prevMonthDate.year;
       final prevMonth = prevMonthDate.month;
 
-      // Đồng bộ số dư thực tế vào cơ sở dữ liệu trước khi nạp
-      await syncAndRecalculateAccountBalances(userId, activeConn: conn);
-
       // A. Danh sách accounts (Tính toán số dư thực tế trực tiếp từ các giao dịch thu/chi/chuyển khoản)
       final accRes = await conn.execute(
         '''SELECT a.*,
@@ -306,13 +303,6 @@ class MySqlService {
       for (var row in accRes.rows) {
         final acc = AccountModel.fromMap(row.assoc());
         accounts.add(acc);
-        // Đồng bộ số dư chuẩn vào bảng accounts
-        try {
-          await conn.execute(
-            'UPDATE accounts SET current_balance = :bal WHERE id = :aid',
-            {'bal': acc.balance, 'aid': acc.id},
-          );
-        } catch (_) {}
 
         if (acc.accountType == 'credit') {
           creditDebt += acc.balance < 0 ? acc.balance.abs() : 0;
@@ -347,23 +337,42 @@ class MySqlService {
       final prevIncome = double.tryParse(prevData['income'] ?? '0') ?? 0.0;
       final prevExpense = double.tryParse(prevData['expense'] ?? '0') ?? 0.0;
 
-      // D. Thu nhập và Chi phí 7 ngày qua (Bar Chart)
+      // D. Thu nhập và Chi phí 7 ngày qua (Bar Chart) - Tối ưu 1 query gom nhóm thay vì 7 queries nối tiếp
       final now = DateTime.now();
+      final start7Days = now.subtract(const Duration(days: 6));
+      final start7Str = '${start7Days.year}-${start7Days.month.toString().padLeft(2, '0')}-${start7Days.day.toString().padLeft(2, '0')}';
+      final end7Str = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      final range7Res = await conn.execute(
+        '''SELECT 
+             DATE_FORMAT(transaction_date, '%Y-%m-%d') as dt,
+             COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+             COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense 
+           FROM transactions 
+           WHERE user_id = :uid 
+             AND transaction_date >= :sdt 
+             AND transaction_date <= :edt
+           GROUP BY dt''',
+        {'uid': userId, 'sdt': start7Str, 'edt': end7Str},
+      );
+
+      final Map<String, Map<String, double>> dailyMap = {};
+      for (var r in range7Res.rows) {
+        final rowAssoc = r.assoc();
+        final dt = rowAssoc['dt']?.toString() ?? '';
+        dailyMap[dt] = {
+          'income': double.tryParse(rowAssoc['income'] ?? '0') ?? 0.0,
+          'expense': double.tryParse(rowAssoc['expense'] ?? '0') ?? 0.0,
+        };
+      }
+
       List<Map<String, dynamic>> last7Days = [];
       for (int i = 6; i >= 0; i--) {
         final day = now.subtract(Duration(days: i));
         final dayStr = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-        final dayRes = await conn.execute(
-          '''SELECT 
-               COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-               COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense 
-             FROM transactions 
-             WHERE user_id = :uid AND transaction_date = :dt''',
-          {'uid': userId, 'dt': dayStr},
-        );
-        final row = dayRes.rows.first.assoc();
-        final inc = double.tryParse(row['income'] ?? '0') ?? 0.0;
-        final exp = double.tryParse(row['expense'] ?? '0') ?? 0.0;
+        final dayStats = dailyMap[dayStr];
+        final inc = dayStats?['income'] ?? 0.0;
+        final exp = dayStats?['expense'] ?? 0.0;
         last7Days.add({
           'date': day,
           'income': inc,
